@@ -11,25 +11,49 @@ on:
         required: true
         default: '50'
         type: number
+      show_first:
+        description: 'How many links to print in logs (e.g., 50)'
+        required: true
+        default: '50'
+        type: number
+
 permissions:
   contents: write
+
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      # ⬇️ Рахуємо BASE_URL для GitHub Pages: https://owner.github.io/repo
+      - name: Compute BASE_URL
+        id: base
+        run: |
+          REPO="${{ github.repository }}"     # owner/repo
+          OWNER="${REPO%%/*}"
+          NAME="${REPO#*/}"
+          echo "BASE_URL=https://${OWNER}.github.io/${NAME}" >> $GITHUB_ENV
+          echo "Base URL: https://${OWNER}.github.io/${NAME}"
+
       - name: Run generator
         env:
           TARGETS: ${{ github.event.inputs.targets }}
           PER_TARGET: ${{ github.event.inputs.per_target }}
-        run: python3 generate_redirects.py
-      - name: Commit generated redirects
+          BASE_URL: ${{ env.BASE_URL }}
+          SHOW_FIRST: ${{ github.event.inputs.show_first }}
+        run: |
+          python3 generate_redirects.py
+
+      - name: Commit generated redirects + lists
         uses: EndBug/add-and-commit@v9
         with:
-          add: "docs/redirects/* docs/redirects_map.csv"
+          add: "docs/redirects/* docs/redirects_map.csv docs/links.txt"
           message: "chore: generate redirects [skip ci]"
           author_name: "redirect-bot"
           author_email: "noreply@github.com"
