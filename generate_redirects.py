@@ -8,6 +8,9 @@ PER_TARGET = int(os.getenv("PER_TARGET", "50"))
 OUT_DIR = pathlib.Path("docs/redirects")
 MAP_CSV = pathlib.Path("docs/redirects_map.csv")
 
+BASE_URL = os.getenv("BASE_URL", "").rstrip("/")  # напр. https://owner.github.io/repo
+SHOW_FIRST = int(os.getenv("SHOW_FIRST", "50"))
+
 if not TARGETS_ENV.strip():
     print("ERROR: provide targets via TARGETS (one per line)")
     sys.exit(2)
@@ -47,11 +50,29 @@ for idx, tgt in enumerate(targets, start=1):
         (OUT_DIR / f"{token}.html").write_text(make_html(tgt), encoding="utf-8")
         created.append((f"{token}.html", tgt))
 
+# CSV карта: filename,target_url
 MAP_CSV.parent.mkdir(parents=True, exist_ok=True)
 with MAP_CSV.open("w", newline="", encoding="utf-8") as f:
     w = csv.writer(f)
     w.writerow(["filename","target_url"])
     w.writerows(created)
 
+# TXT зі ЗБРАНИМИ ПОВНИМИ URL (щоб одразу копіювати)
+links_txt = pathlib.Path("docs/links.txt")
+full_links = []
+if BASE_URL:
+    for fn, _ in created:
+        # повні посилання на редіректи
+        full_links.append(f"{BASE_URL}/redirects/{fn}")
+    links_txt.write_text("\n".join(full_links) + "\n", encoding="utf-8")
+    print(f"\n=== First {min(SHOW_FIRST,len(full_links))} links ===")
+    for u in full_links[:SHOW_FIRST]:
+        print(u)
+    print("=== End ===\n")
+else:
+    print("WARNING: BASE_URL is empty; links.txt not created.")
+
 print(f"Created {len(created)} files in {OUT_DIR}")
 print(f"Map at {MAP_CSV}")
+if BASE_URL:
+    print(f"All links saved to {links_txt}")
