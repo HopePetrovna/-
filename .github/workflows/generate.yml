@@ -1,0 +1,36 @@
+name: Generate Redirects
+on:
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: 'Telegram targets (one per line): https://t.me/page1'
+        required: true
+        type: string
+      per_target:
+        description: 'Redirects per target (e.g., 50)'
+        required: true
+        default: '50'
+        type: number
+permissions:
+  contents: write
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run generator
+        env:
+          TARGETS: ${{ github.event.inputs.targets }}
+          PER_TARGET: ${{ github.event.inputs.per_target }}
+        run: python3 generate_redirects.py
+      - name: Commit generated redirects
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: "docs/redirects/* docs/redirects_map.csv"
+          message: "chore: generate redirects [skip ci]"
+          author_name: "redirect-bot"
+          author_email: "noreply@github.com"
+          push: true
